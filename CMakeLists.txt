@@ -79,6 +79,14 @@ if(UNIX)
     else()
         message(FATAL_ERROR "Unsupported UNIX platform: ${CMAKE_SYSTEM_NAME}")
     endif()
+elseif(WIN32)
+    # Allow native Windows builds. Provide a platform define and fallbacks for
+    # libraries that are normally provided via pkg-config on Unix.
+    add_definitions("-DAPPIMAGEUPDATE_WINDOWS")
+    # Disable MSVC's deprecation warnings for standard C functions used by the project
+    if(MSVC)
+        add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+    endif()
 else()
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
@@ -88,7 +96,26 @@ find_package(PkgConfig)
 
 # we used to ship a minimal, zlib-licensed hash lib as part of zsync2
 # now, we use a system provided crypto library for this purpose
-pkg_check_modules(libgcrypt REQUIRED IMPORTED_TARGET libgcrypt)
+if(UNIX)
+    pkg_check_modules(libgcrypt REQUIRED IMPORTED_TARGET libgcrypt)
+    set(LIBGCRYPT_LIB_TARGET PkgConfig::libgcrypt)
+elseif(WIN32)
+    # On Windows, libgcrypt is typically not available. Provide an internal
+    # compatibility implementation that uses Windows BCrypt APIs so OpenSSL
+    # is not required for a native build.
+    # Create an IMPORTED INTERFACE target so it does not need to be exported
+    # by this project (avoids install/export issues).
+    add_library(libgcrypt_compat INTERFACE IMPORTED)
+    # Ensure the compatibility target pulls in the Windows bcrypt library so
+    # BCrypt symbols are available at link time for targets linking against
+    # ${LIBGCRYPT_LIB_TARGET}.
+    set_target_properties(libgcrypt_compat PROPERTIES
+        INTERFACE_LINK_LIBRARIES "bcrypt"
+    )
+    set(LIBGCRYPT_LIB_TARGET libgcrypt_compat)
+else()
+    message(FATAL_ERROR "Unsupported platform for crypto backend: ${CMAKE_SYSTEM_NAME}")
+endif()
 
 option(USE_SYSTEM_CPR OFF "Use system-wide installed CPR")
 option(USE_SYSTEM_ARGS OFF "Use system-wide installed args")

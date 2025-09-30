@@ -55,7 +55,11 @@ char *strptime(const char *s, const char *fmt, struct tm *tm) {
     int matched = 0;
 
     /* Try with weekday prefix: "Tue, 25 Jul 2006 20:02:17 +0000" */
+#if defined(_MSC_VER)
+    matched = sscanf_s(s, "%*[^,], %d %3s %d %d:%d:%d", &day, month, (unsigned)_countof(month), &year, &hour, &min, &sec);
+#else
     matched = sscanf(s, "%*[^,], %d %3s %d %d:%d:%d", &day, month, &year, &hour, &min, &sec);
+#endif
     if (matched == 6) {
         int mon = month_str_to_int(month);
         if (mon < 0) return NULL;
@@ -71,7 +75,12 @@ char *strptime(const char *s, const char *fmt, struct tm *tm) {
     }
 
     /* Try without weekday: "25 Jul 2006 20:02:17 +0000" */
+    matched = 0;
+#if defined(_MSC_VER)
+    matched = sscanf_s(s, "%d %3s %d %d:%d:%d", &day, month, (unsigned)_countof(month), &year, &hour, &min, &sec);
+#else
     matched = sscanf(s, "%d %3s %d %d:%d:%d", &day, month, &year, &hour, &min, &sec);
+#endif
     if (matched == 6) {
         int mon = month_str_to_int(month);
         if (mon < 0) return NULL;
