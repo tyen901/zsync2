@@ -18,14 +18,18 @@
 
 #include <stdio.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct rcksum_state;
 
 typedef int zs_blockid;
 
 struct rsum {
-	unsigned short	a;
-	unsigned short	b;
-} __attribute__((packed));
+	unsigned short    a;
+	unsigned short    b;
+} PACKED_ATTR;
 
 #define CHECKSUM_SIZE 16
 
@@ -56,6 +60,10 @@ zs_blockid* rcksum_needed_block_ranges(const struct rcksum_state* z, int* num, z
 int rcksum_blocks_todo(const struct rcksum_state*);
 
 /* For preparing rcksum control files - in both cases len is the block size. */
-struct rsum __attribute__((pure)) rcksum_calc_rsum_block(const unsigned char* data, size_t len);
+struct rsum PURE_ATTR rcksum_calc_rsum_block(const unsigned char* data, size_t len);
 void rcksum_calc_checksum(unsigned char *c, const unsigned char* data, size_t len);
+
+#ifdef __cplusplus
+}
+#endif
 

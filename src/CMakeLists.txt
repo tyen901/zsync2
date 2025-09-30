@@ -17,6 +17,9 @@ function(add_libzsync2 NAME BUILD_TYPE)
         zsclient.cpp
         legacy_http.c
         legacy_progress.c
+        # For Windows provide a libgcrypt compatibility implementation
+            $<$<PLATFORM_ID:Windows>:windows_gcrypt_compat.cpp>
+            $<$<PLATFORM_ID:Windows>:windows_compat.c>
         zsmake.cpp
         zsutil.cpp
         format_string.h
@@ -30,8 +33,10 @@ function(add_libzsync2 NAME BUILD_TYPE)
     target_link_libraries("${NAME}"
         PRIVATE cpr libzsync
         # needed for public header-only lib zshash.h
-        PUBLIC PkgConfig::libgcrypt
+        PUBLIC ${LIBGCRYPT_LIB_TARGET}
     )
+
+    # Additional platform-specific link deps (if any) can be added here.
     target_include_directories("${NAME}"
         PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
         INTERFACE "$<INSTALL_INTERFACE:include>"
@@ -70,6 +75,7 @@ target_link_libraries(zsync2 PRIVATE libzsync2_standalone args)
 # TODO: get rid of this
 target_link_libraries(zsync2 PRIVATE cpr)
 set_target_properties(zsync2 PROPERTIES INSTALL_RPATH "\$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
+target_link_libraries(zsync2 PRIVATE librcksum)
 
 ## zsyncmake2 executable
 add_executable(zsyncmake2 make_main.cpp)
@@ -77,6 +83,7 @@ target_link_libraries(zsyncmake2 PRIVATE libzsync2 args)
 # TODO: get rid of this
 target_link_libraries(zsyncmake2 PRIVATE cpr)
 set_target_properties(zsyncmake2 PROPERTIES INSTALL_RPATH "\$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
+target_link_libraries(zsyncmake2 PRIVATE librcksum)
 
 # install targets
 install(
