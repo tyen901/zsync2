@@ -36,6 +36,11 @@ function(add_libzsync2 NAME BUILD_TYPE)
         PUBLIC ${LIBGCRYPT_LIB_TARGET}
     )
 
+    # On Windows, our compatibility implementation uses BCrypt APIs; link bcrypt.lib
+    if(WIN32)
+        target_link_libraries("${NAME}" PRIVATE bcrypt)
+    endif()
+
     # Additional platform-specific link deps (if any) can be added here.
     target_include_directories("${NAME}"
         PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"

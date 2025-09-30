@@ -15,14 +15,27 @@
 
 #include <inttypes.h>
 
-#ifdef PRIu32
-# define SIZE_T_PF "%zd"
-#else
-# define SIZE_T_PF "%u"
-#endif
-
-#ifdef PRIu64
-# define OFF_T_PF "%" PRIu64
-#else
+/* Provide safe, explicit printf format macros for various platforms.
+ * On MSVC the PRIu macros from inttypes.h may not be available or may
+ * expand in a way that leaves raw tokens in the source (which confuses
+ * the parser when used outside string literals). Force sensible defaults
+ * for MSVC, otherwise prefer the standard PRIu* macros when present.
+ */
+#ifdef _MSC_VER
+/* MSVC: use long long specifiers which are supported by MSVC's printf
+	implementation and by modern MSVC toolsets. */
 # define OFF_T_PF "%llu"
+# define SIZE_T_PF "%zu"
+#else
+# ifdef PRIu32
+#  define SIZE_T_PF "%zd"
+# else
+#  define SIZE_T_PF "%u"
+# endif
+
+# ifdef PRIu64
+#  define OFF_T_PF "%" PRIu64
+# else
+#  define OFF_T_PF "%llu"
+# endif
 #endif

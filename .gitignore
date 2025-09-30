@@ -8,3 +8,4 @@ cmake-build-*/
 zsync2*.txt
 *.AppImage*
 *.swp
+build-msvc/

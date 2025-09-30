@@ -24,7 +24,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <unistd.h>
+#include "zsglobal.h"
+#include <io.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #ifdef WITH_DMALLOC
 # include <dmalloc.h>
@@ -38,7 +42,7 @@
 
 /* rcksum_calc_rsum_block(data, data_len)
  * Calculate the rsum for a single block of data. */
-struct rsum __attribute__ ((pure)) rcksum_calc_rsum_block(const unsigned char *data, size_t len) {
+struct rsum PURE_ATTR rcksum_calc_rsum_block(const unsigned char *data, size_t len) {
     register unsigned short a = 0;
     register unsigned short b = 0;
 
@@ -67,11 +71,33 @@ void rcksum_calc_checksum(unsigned char *c, const unsigned char *data,
 #ifndef HAVE_PWRITE
 /* Fallback pwrite(2) implementation if needed (but not strictly complete, as
  * it moves the file pointer - we don't care). */
+/* Provide a minimal pwrite implementation for platforms that lack it (Windows) */
+#ifndef HAVE_PWRITE
+#ifdef _WIN32
+ssize_t pwrite(int d, const void *buf, size_t nbytes, off_t offset) {
+    /* Windows: use _lseeki64 and _write on low-level handles */
+    if (_lseeki64(d, offset, SEEK_SET) == -1)
+        return -1;
+    return _write(d, (const char*)buf, (unsigned)nbytes);
+}
+#else
 ssize_t pwrite(int d, const void *buf, size_t nbytes, off_t offset) {
     if (lseek(d, offset, SEEK_SET) == -1)
         return -1;
     return write(d, buf, nbytes);
 }
+#endif
+#endif
+
+/* Provide a minimal pread implementation for Windows if missing */
+#ifndef HAVE_PREAD
+#ifdef _WIN32
+ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
+    if (_lseeki64(fd, offset, SEEK_SET) == -1) return -1;
+    return _read(fd, (char*)buf, (unsigned)count);
+}
+#endif
+#endif
 #endif
 
 /* write_blocks(rcksum_state, buf, startblock, endblock)

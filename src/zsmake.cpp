@@ -1,5 +1,11 @@
-// system headers
-#include <arpa/inet.h>
+#// system headers
+#include "zsglobal.h"
+#if defined(_WIN32) || defined(_MSC_VER)
+# include <winsock2.h>
+# include <ws2tcpip.h>
+#else
+# include <arpa/inet.h>
+#endif
 #include <cmath>
 #include <cstring>
 #include <fstream>

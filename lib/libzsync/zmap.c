@@ -27,7 +27,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include <arpa/inet.h>
+#ifdef _WIN32
+# include <winsock2.h>
+# include <ws2tcpip.h>
+#else
+# include <arpa/inet.h>
+#endif
 #ifdef HAVE_INTTYPES_H
 #include <inttypes.h>
 #endif
@@ -275,7 +280,8 @@ off_t *zmap_to_compressed_ranges(const struct zmap *zm, off_t * byterange,
         k = find_compressed_ranges_for(zm, zbyterange, k, &lastwroteblockstart_inbitoffset,
                                        byterange[2 * i], byterange[2 * i + 1]);
         if (k < 0) {
-            fprintf(stderr, "Z-Map couldn't tell us how to find " OFF_T_PF "-" OFF_T_PF "\n", byterange[2 * i], byterange[2 * i + 1]);
+            fprintf(stderr, "Z-Map couldn't tell us how to find " OFF_T_PF "-" OFF_T_PF "\n",
+                    (unsigned long long)byterange[2 * i], (unsigned long long)byterange[2 * i + 1]);
             free(zbyterange);
             return NULL;
         }

@@ -9,7 +9,6 @@
 #include <set>
 #include <sys/stat.h>
 #include <utility>
-#include <utime.h>
 
 // library includes
 #include <curl/curl.h>
@@ -17,7 +16,7 @@
 
 extern "C" {
     #include <zsync.h>
-    #include <zlib.h>
+    #include "../lib/zlib/zlib.h"
 }
 
 // local includes
@@ -469,7 +468,35 @@ namespace zsync2 {
             };
             return fopencookie(f, "r", iofuncs);
 #else
-#error TODO: implement openGzFile() for this platform!
+            /* Fallback for non-Linux platforms: decompress entire gz file into a temporary file
+             * and return the FILE* opened on that temporary file. This avoids needing fopencookie
+             * or funopen on Windows. */
+            {
+                FILE* tf = tmpfile();
+                if (!tf) {
+                    gzclose((gzFile) f);
+                    return nullptr;
+                }
+
+                const int bufsize = 65536;
+                std::vector<char> buf(bufsize);
+                int n;
+                while ((n = gzread((gzFile) f, buf.data(), (unsigned) bufsize)) > 0) {
+                    if (fwrite(buf.data(), 1, (size_t)n, tf) != (size_t)n) {
+                        fclose(tf);
+                        gzclose((gzFile) f);
+                        return nullptr;
+                    }
+                }
+
+                gzclose((gzFile) f);
+                // rewind and return the temp file
+                if (fseek(tf, 0, SEEK_SET) != 0) {
+                    fclose(tf);
+                    return nullptr;
+                }
+                return tf;
+            }
 #endif
         }
 

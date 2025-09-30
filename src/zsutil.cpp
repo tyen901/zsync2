@@ -52,7 +52,12 @@ namespace zsync2 {
         struct stat fstat;
 
         if (stat(path.c_str(), &fstat) == 0) {
+#if defined(_WIN32) || defined(_MSC_VER)
+            /* Windows stat has st_mtime */
+            return fstat.st_mtime;
+#else
             return fstat.st_mtim.tv_sec;
+#endif
         }
 
         return -1;

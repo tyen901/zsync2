@@ -16,9 +16,9 @@
 #include "zsglobal.h"
 
 struct gzblock {
-  uint16_t inbitoffset;
-  uint16_t outbyteoffset;
-} __attribute__((packed));
+    uint16_t inbitoffset;
+    uint16_t outbyteoffset;
+} PACKED_ATTR;
 
 #define GZB_NOTBLOCKSTART 0x8000
 

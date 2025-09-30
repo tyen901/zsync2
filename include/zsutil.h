@@ -10,6 +10,7 @@
 // system headers
 #include <string>
 #include <vector>
+#include "zsglobal.h"
 
 namespace zsync2 {
     bool ltrim(std::string &s, char to_trim = ' ');;
@@ -35,7 +36,7 @@ namespace zsync2 {
     // in case of success, sets redirectedUrl and returns true, false otherwise
     bool resolveRedirections(const std::string& absoluteUrl, std::string& redirectedUrl);
 
-    int32_t getPerms(const std::string& path, mode_t& permissions);;
+    int32_t getPerms(const std::string& path, mode_t& permissions);
 
     std::vector<std::string> split(const std::string& s, char delim = ' ');
 

@@ -7,7 +7,11 @@
 #include <sstream>
 
 // library headers
+#if defined(_WIN32) || defined(WIN32)
+#include "gcrypt_compat.h"
+#else
 #include <gcrypt.h>
+#endif
 
 // own headers
 #include "zsutil.h"

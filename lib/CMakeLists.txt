@@ -31,10 +31,22 @@ if(NOT USE_SYSTEM_CPR)
         # see https://github.com/libcpr/cpr/issues/804
         # note: don't use find_package(CURL), for some reason it'd cause zsync2 to link to the system libcurl in
         # addition to the statically linked CPR; we just need the version
-        find_package(PkgConfig REQUIRED)
-        pkg_search_module(PKGCONFIG_CURL libcurl)
-        set(PKGCONFIG_CURL_FOUND ${PKGCONFIG_CURL_FOUND} PARENT_SCOPE)
-        set(PKGCONFIG_CURL_VERSION ${PKGCONFIG_CURL_VERSION} PARENT_SCOPE)
+        if(UNIX)
+            find_package(PkgConfig REQUIRED)
+            pkg_search_module(PKGCONFIG_CURL libcurl)
+            set(PKGCONFIG_CURL_FOUND ${PKGCONFIG_CURL_FOUND} PARENT_SCOPE)
+            set(PKGCONFIG_CURL_VERSION ${PKGCONFIG_CURL_VERSION} PARENT_SCOPE)
+
+            if(PKGCONFIG_CURL_FOUND)
+                message(STATUS "Found libcurl ${PKGCONFIG_CURL_VERSION}")
+            endif()
+        else()
+            # On non-UNIX (Windows) systems, pkg-config is typically not present.
+            # Provide sensible defaults so CPR's import can proceed via FetchContent
+            # and rely on vcpkg-provided packages instead.
+            set(PKGCONFIG_CURL_FOUND FALSE PARENT_SCOPE)
+            set(PKGCONFIG_CURL_VERSION "" PARENT_SCOPE)
+        endif()
 
         if(PKGCONFIG_CURL_FOUND)
             message(STATUS "Found libcurl ${PKGCONFIG_CURL_VERSION}")

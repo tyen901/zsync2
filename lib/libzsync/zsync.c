@@ -37,12 +37,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
-#include <unistd.h>
+#ifdef _WIN32
+# include "../../include/zsglobal.h"
+# include <io.h>
+#else
+# include <unistd.h>
+#endif
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
 
-#include <arpa/inet.h>
+#ifdef _WIN32
+# include <winsock2.h>
+# include <ws2tcpip.h>
+#else
+# include <arpa/inet.h>
+#endif
 
 #ifdef WITH_DMALLOC
 # include <dmalloc.h>

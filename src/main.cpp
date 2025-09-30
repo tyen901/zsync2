@@ -82,7 +82,13 @@ int main(const int argc, const char** argv) {
     }
 
     if (verbose) {
-        putenv(strdup("CURLOPT_VERBOSE=1"));
+#ifdef _MSC_VER
+    /* Use _putenv_s which accepts name/value and avoids needing to manage
+     * a strdup'd string lifetime. */
+    _putenv_s("CURLOPT_VERBOSE", "1");
+#else
+    putenv(strdup("CURLOPT_VERBOSE=1"));
+#endif
     }
 
     // check wheter path has been given at all
@@ -105,8 +111,13 @@ int main(const int argc, const char** argv) {
 
     // redirect cout/cerr to /dev/null in quiet mode
     if (quietMode) {
-        freopen("/dev/null", "a", stdout);
-        freopen("/dev/null", "a", stderr);
+#ifdef _MSC_VER
+    freopen("NUL", "a", stdout);
+    freopen("NUL", "a", stderr);
+#else
+    freopen("/dev/null", "a", stdout);
+    freopen("/dev/null", "a", stderr);
+#endif
     }
 
     string outPath;

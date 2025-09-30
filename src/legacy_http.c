@@ -25,12 +25,26 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#if !defined(_WIN32) && !defined(_MSC_VER)
 #include <unistd.h>
+#else
+/* On Windows, use io.h for POSIX-like low-level I/O; zsglobal.h already
+    provides further compatibility shims. Avoid including unistd.h which
+    doesn't exist on MSVC. */
+#include <io.h>
+#endif
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#if !defined(_WIN32) && !defined(_MSC_VER)
 #include <sys/socket.h>
 #include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#else
+/* On Windows, sockets are provided by winsock2/ws2tcpip which are included
+    transitively via zsglobal.h. Do not include POSIX socket headers here. */
+#endif
 #include <time.h>
 #include <curl/curl.h>
 
@@ -52,16 +66,10 @@
 void log_message(const char* msgfmt, ...) {
     va_list args;
     va_start(args, msgfmt);
-
-    // print prefix
-    char prefix[] = "zsync_legacy: ";
-    fprintf(stderr, prefix, sizeof(prefix));
-
-    // print formatted message
+    // print prefix and formatted message safely
+    fputs("zsync_legacy: ", stderr);
     vfprintf(stderr, msgfmt, args);
-
-    // print newline
-    fprintf(stderr, "\n");
+    fputc('\n', stderr);
 
     va_end(args);
 }
@@ -200,8 +208,9 @@ void http_load_ranges(struct range_fetch* rf)
         /* makes the table of ranges access more readable */
         i = rf->rangessent;
         l = strlen(ranges_opt);
-        snprintf(range, sizeof(range), OFF_T_PF "-" OFF_T_PF ",",
-                 rf->ranges_todo[2 * i], rf->ranges_todo[2 * i + 1]);
+    /* Ensure we pass an integer type matching OFF_T_PF; cast to unsigned long long */
+    snprintf(range, sizeof(range), OFF_T_PF "-" OFF_T_PF ",",
+         (unsigned long long)rf->ranges_todo[2 * i], (unsigned long long)rf->ranges_todo[2 * i + 1]);
         strncat(ranges_opt, range, l + strlen(range));
         rf->rangessent++;
     }
@@ -729,13 +738,15 @@ int get_range_block(struct range_fetch *rf, off_t * offset, unsigned char *data,
                 /* We're looking for the Content-Range: header, to tell us how
                  * many bytes and what part of the target file they represent.
                  */
-                if (2 ==
-                    sscanf(buf,
-                           "content-range: bytes " OFF_T_PF "-" OFF_T_PF "/",
-                           &from, &to)) {
-                    rf->offset = from;
-                    rf->block_left = to - from + 1;
-                    gotr = 1;
+                {
+                    unsigned long long ufrom = 0, uto = 0;
+                    if (2 == sscanf(buf, "content-range: bytes " OFF_T_PF "-" OFF_T_PF "/", &ufrom, &uto)) {
+                        from = (off_t)ufrom;
+                        to = (off_t)uto;
+                        rf->offset = from;
+                        rf->block_left = to - from + 1;
+                        gotr = 1;
+                    }
                 }
             }
 
@@ -793,7 +804,9 @@ void range_fetch_end(struct range_fetch *rf) {
 
 // returns non-zero ("true") on success, 0 ("false") on failure
 int file_exists(const char* path) {
-    struct stat statbuf = {};
+    /* Use a portable zero-initializer rather than C++-style {} which is
+     * not valid C in MSVC. */
+    struct stat statbuf = {0};
 
     if (stat(path, &statbuf) == 0) {
         return 1;

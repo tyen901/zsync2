@@ -23,7 +23,13 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+#ifdef _WIN32
+# include <io.h>
+# include <fcntl.h>
+# include <stdio.h>
+#else
+# include <unistd.h>
+#endif
 
 #ifdef WITH_DMALLOC
 # include <dmalloc.h>
@@ -80,11 +86,41 @@ struct rcksum_state *rcksum_init(zs_blockid nblocks, size_t blocksize,
     if (!(rs->blocksize & (rs->blocksize - 1)) && rs->filename != NULL
             && rs->blocks) {
         /* Create temporary file */
+#ifdef _WIN32
+        /* conservative path length */
+        enum { TMP_NAME_LEN = 260 };
+        char tmpname_template[TMP_NAME_LEN];
+        snprintf(tmpname_template, sizeof(tmpname_template), "%s", rs->filename);
+        /* ensure _S_IREAD/_S_IWRITE exist */
+#ifndef _S_IREAD
+# define _S_IREAD 0x0100
+#endif
+#ifndef _S_IWRITE
+# define _S_IWRITE 0x0080
+#endif
+        if (_mktemp_s(tmpname_template, sizeof(tmpname_template)) == 0) {
+            int fd = _open(tmpname_template, _O_CREAT | _O_TEMPORARY | _O_RDWR, _S_IREAD | _S_IWRITE);
+            if (fd == -1) {
+                perror("open");
+                rs->fd = -1;
+            } else {
+                rs->fd = fd;
+                /* replace filename with actual temp name */
+                free(rs->filename);
+                rs->filename = _strdup(tmpname_template);
+            }
+        } else {
+            rs->fd = -1;
+            perror("mktemp");
+        }
+#else
         rs->fd = mkstemp(rs->filename);
         if (rs->fd == -1) {
             perror("open");
         }
-        else {
+#endif
+
+        if (rs->fd != -1) {
             {   /* Calculate bit-shift for blocksize */
                 int i;
                 for (i = 0; i < 32; i++)

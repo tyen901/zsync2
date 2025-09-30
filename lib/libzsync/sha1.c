@@ -20,18 +20,21 @@
 static const char rcsid[] = "$OpenBSD: sha1.c,v 1.19 2004/05/28 15:10:27 millert Exp $";
 #endif /* LIBC_SCCS and not lint */
 
-#include <sys/param.h>
 #include <stdint.h>
 #include <string.h>
 #include "sha1.h"
 
 #define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
 
-/* Map Solaris endian stuff to something useful */
-#if defined(_BIG_ENDIAN) && !defined(_BYTE_ORDER)
-#define LITTLE_ENDIAN 0
-#define BIG_ENDIAN 1
-#define BYTE_ORDER 1
+/* Map endian detection to something useful */
+#if !defined(BYTE_ORDER)
+# if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__)
+#  define BYTE_ORDER __BYTE_ORDER__
+# elif defined(_WIN32)
+#  define BYTE_ORDER __ORDER_LITTLE_ENDIAN__
+# else
+#  include <endian.h>
+# endif
 #endif
 
 /*
