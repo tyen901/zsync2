@@ -68,7 +68,13 @@ add_libzsync2(libzsync2 SHARED)
 
 # for use as a submodule
 add_libzsync2(libzsync2_static STATIC)
-set_property(TARGET libzsync2_static PROPERTY OUTPUT_NAME libzsync2)
+# On non-Windows platforms, provide the canonical output name so installed
+# library names match the shared library. On Windows building both shared
+# and static with the same OUTPUT_NAME creates two rules that generate the
+# same .lib (import lib vs static lib) which breaks some generators (Ninja).
+if(NOT WIN32)
+    set_property(TARGET libzsync2_static PROPERTY OUTPUT_NAME libzsync2)
+endif()
 
 add_libzsync2(libzsync2_standalone STATIC)
 # this will propagate to target zsync, too
@@ -84,7 +90,14 @@ target_link_libraries(zsync2 PRIVATE librcksum)
 
 ## zsyncmake2 executable
 add_executable(zsyncmake2 make_main.cpp)
-target_link_libraries(zsyncmake2 PRIVATE libzsync2 args)
+if(WIN32)
+    # On Windows prefer the static variant for the zsyncmake2 executable to
+    # avoid issues with import libraries and differing output names between
+    # shared/static builds when using Visual Studio / Ninja.
+    target_link_libraries(zsyncmake2 PRIVATE libzsync2_static args)
+else()
+    target_link_libraries(zsyncmake2 PRIVATE libzsync2 args)
+endif()
 # TODO: get rid of this
 target_link_libraries(zsyncmake2 PRIVATE cpr)
 set_target_properties(zsyncmake2 PROPERTIES INSTALL_RPATH "\$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
