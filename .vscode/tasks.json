@@ -1,0 +1,180 @@
+{
+  "version": "2.0.0",
+  "inputs": [
+    {
+      "id": "cmakeGenerator",
+      "type": "pickString",
+      "description": "CMake generator to use",
+      "options": [
+        "Ninja",
+        "Visual Studio 17 2022",
+        "Visual Studio 16 2019",
+        "MinGW Makefiles"
+      ],
+      "default": "Ninja"
+    },
+    {
+      "id": "cmakeArch",
+      "type": "pickString",
+      "description": "Architecture for Visual Studio generators",
+      "options": [
+        "x64",
+        "Win32"
+      ],
+      "default": "x64"
+    },
+    {
+      "id": "buildType",
+      "type": "pickString",
+      "description": "CMake build type",
+      "options": [
+        "Debug",
+        "Release",
+        "RelWithDebInfo",
+        "MinSizeRel"
+      ],
+      "default": "Debug"
+    },
+    {
+      "id": "parallelJobs",
+      "type": "promptString",
+      "description": "Number of parallel build jobs (leave blank for default)",
+      "default": ""
+    }
+  ],
+
+  "tasks": [
+    {
+      "label": "CMake: Configure (Ninja / Make)",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "-S", "${workspaceFolder}",
+        "-B", "${workspaceFolder}\\build",
+        "-G", "${input:cmakeGenerator}",
+        "-DCMAKE_BUILD_TYPE=${input:buildType}",
+        "-DUSE_SYSTEM_CPR=1",
+        "-DBUILD_CPR_TESTS=0"
+      ],
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "CMake: Configure (Visual Studio)",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "-S", "${workspaceFolder}",
+        "-B", "${workspaceFolder}\\build",
+        "-G", "${input:cmakeGenerator}",
+        "-A", "${input:cmakeArch}",
+        "-DCMAKE_BUILD_TYPE=${input:buildType}",
+        "-DUSE_SYSTEM_CPR=1",
+        "-DBUILD_CPR_TESTS=0"
+      ],
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "CMake: Build",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "--build", "${workspaceFolder}\\build",
+        "--config", "${input:buildType}",
+        "--parallel", "${input:parallelJobs}"
+      ],
+      "problemMatcher": [
+        "$msCompile"
+      ],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "CMake: Rebuild",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "--build", "${workspaceFolder}\\build",
+        "--config", "${input:buildType}",
+        "--target", "ALL_BUILD",
+        "--clean-first",
+        "--parallel", "${input:parallelJobs}"
+      ],
+      "problemMatcher": [
+        "$msCompile"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "CMake: Clean",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "--build", "${workspaceFolder}\\build",
+        "--config", "${input:buildType}",
+        "--target", "clean"
+      ],
+      "problemMatcher": [],
+      "group": {
+        "kind": "none",
+        "isDefault": false
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "CTest: Run Tests",
+      "type": "shell",
+      "command": "ctest",
+      "args": [
+        "-C", "${input:buildType}",
+        "--output-on-failure"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}\\build"
+      },
+      "problemMatcher": [],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "panel": "shared"
+      }
+    }
+  ]
+}
