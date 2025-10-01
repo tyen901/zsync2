@@ -165,7 +165,10 @@ static inline char* realpath(const char* path, char* resolved_path) {
 #  define strncasecmp _strnicmp
 # endif
 # ifndef ftruncate
-#  define ftruncate _chsize
+#  /* Declare ftruncate so callers compile; definition is provided in
+#   * src/windows_compat.c on Windows and maps to the platform-specific
+#   * implementation. Use a 64-bit length parameter to support large files. */
+int ftruncate(int fd, long long length);
 # endif
 
 /* Provide a prototype for strptime when building on Windows; an implementation

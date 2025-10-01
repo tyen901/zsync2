@@ -41,6 +41,74 @@ make -j$(nproc)
 
 See `.travis.yml` for building on Travis CI.
 
+
+### Windows
+
+Below are two supported Windows workflows. The repository builds the bundled zlib by default; avoid installing `zlib` into your vcpkg instance unless you explicitly intend to replace the bundled copy (installing zlib alongside the bundled zlib can cause duplicate symbol linker errors).
+
+Windows (recommended): Build with vcpkg (recommended for dependencies like cpr, gtest)
+
+1. Install vcpkg (one-time):
+
+```powershell
+git clone https://github.com/microsoft/vcpkg.git C:/vcpkg
+Push-Location C:/vcpkg
+.\bootstrap-vcpkg.bat
+Pop-Location
+```
+
+2. Install the dependencies you want to supply from vcpkg (example x64):
+
+```powershell
+C:/vcpkg/vcpkg.exe install gtest:x64-windows
+C:/vcpkg/vcpkg.exe install cpr:x64-windows
+# Do NOT install zlib unless you understand symbol collision risks
+# C:/vcpkg/vcpkg.exe install zlib:x64-windows
+```
+
+3. Configure and build (Visual Studio generator example):
+
+```powershell
+# from the repository root
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+cmake --build build --config Debug --parallel 4
+```
+
+Alternate: configure for Ninja while still using the vcpkg toolchain (preferred for fast command-line builds):
+
+```powershell
+cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+cmake --build build --config Debug --parallel 4
+```
+
+4. Run tests:
+
+```powershell
+Push-Location build
+ctest -C Debug --output-on-failure
+Pop-Location
+```
+
+Windows (no vcpkg): Build with Visual Studio or Ninja and rely on bundled libraries
+
+If you don't want to use vcpkg, the project will build the bundled copies of its vendored libraries (including zlib). Use a matching generator for your Visual Studio or Ninja setup:
+
+```powershell
+# Visual Studio generator (creates a .sln in build/)
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release --parallel 4
+
+# Or use Ninja (command-line build)
+cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release --parallel 4
+```
+
+Notes and common pitfalls:
+
+- Bundled zlib: the project builds and links the bundled zlib by default. Installing a conflicting system zlib (e.g., into vcpkg) while also building the bundled copy can produce duplicate symbol linker errors (inflate, zlibVersion, etc.). If you must use a system zlib, make sure you configure the project and toolchain consistently so the bundled zlib is not also built.
+- CPR and args: you can provide system-installed `cpr` and `args` via vcpkg. If CMake cannot find a system `cpr` package, the project will fetch and build its bundled copy automatically.
+- If CMake caches a failed find_package() result, delete `build/CMakeCache.txt` (or the whole `build/` folder) and re-run the configure command after changing vcpkg installs or CMake options.
+
 ## Functional description
 
 zsync is a well known tool for downloading and updating local files from HTTP

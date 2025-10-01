@@ -101,12 +101,16 @@ char *strptime(const char *s, const char *fmt, struct tm *tm) {
                     *tm = tmp;
                     return (char *)s + strlen(s);
                 }
-                /* epoch currently represents tm as UTC; the timestamp actually
-                 * corresponds to epoch - offset (because tmp was in timestamp's
-                 * local wall time). So compute corrected epoch and convert to
-                 * localtime so that subsequent mktime(&tm) yields the same epoch. */
+                /* The parsed tmp represents wall-clock time in the timezone
+                 * given by the offset. Compute the absolute epoch then
+                 * subtract the offset to get UTC epoch, and finally convert
+                 * that epoch to local broken-down time (localtime) so the
+                 * returned struct tm matches glibc behaviour where callers
+                 * often call mktime() on the returned value. Using localtime
+                 * here ensures mktime(&tm) produces the same epoch as the
+                 * original timestamp. */
                 epoch -= offset;
-                /* Convert to localtime in a thread-safe way */
+                /* Convert to local time in a thread-safe way */
 #if defined(_MSC_VER)
                 struct tm local;
                 errno_t er = localtime_s(&local, &epoch);

@@ -3,7 +3,6 @@ cmake_minimum_required(VERSION 3.6)
 
 include_directories(.)
 
-# include subdirectories in the right order
 add_subdirectory(zlib)
 add_subdirectory(librcksum)
 add_subdirectory(libzsync)

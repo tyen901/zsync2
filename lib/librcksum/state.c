@@ -99,7 +99,7 @@ struct rcksum_state *rcksum_init(zs_blockid nblocks, size_t blocksize,
 # define _S_IWRITE 0x0080
 #endif
         if (_mktemp_s(tmpname_template, sizeof(tmpname_template)) == 0) {
-            int fd = _open(tmpname_template, _O_CREAT | _O_TEMPORARY | _O_RDWR, _S_IREAD | _S_IWRITE);
+            int fd = _open(tmpname_template, _O_CREAT | _O_TEMPORARY | _O_RDWR | _O_BINARY | _O_EXCL, _S_IREAD | _S_IWRITE);
             if (fd == -1) {
                 perror("open");
                 rs->fd = -1;

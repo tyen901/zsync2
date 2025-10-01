@@ -24,11 +24,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include "zsglobal.h"
+
+#ifdef _WIN32
 #include <io.h>
+#include <fcntl.h>
+#else
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <unistd.h>
+#endif
 
 #ifdef WITH_DMALLOC
 # include <dmalloc.h>
