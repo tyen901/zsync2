@@ -49,7 +49,10 @@ struct rsum PURE_ATTR rcksum_calc_rsum_block(const unsigned char *data, size_t l
     while (len) {
         unsigned char c = *data++;
         a += c;
-        b += len * c;
+        /* len is size_t; multiply may be larger than unsigned short —
+         * explicitly cast to unsigned short to match struct rsum's width
+         * while preserving the original wrap behaviour */
+        b += (unsigned short)(len * c);
         len--;
     }
     {
@@ -109,8 +112,10 @@ static void write_blocks(struct rcksum_state *z, const unsigned char *data,
     off_t offset = ((off_t) bfrom) << z->blockshift;
 
     while (len) {
-        size_t l = len;
-        int rc;
+        size_t l = (size_t)len;
+        /* rc holds number of bytes written; use ssize_t which matches
+         * the pwrite return type and is signed for error reporting. */
+        ssize_t rc;
 
         /* On some platforms, the bytes-to-write could be more than pwrite(2)
          * will accept. Write in blocks of 2^31 bytes in that case. */
@@ -118,17 +123,17 @@ static void write_blocks(struct rcksum_state *z, const unsigned char *data,
             l = 0x8000000;
 
         /* Write */
-        rc = pwrite(z->fd, data, l, offset);
+    rc = pwrite(z->fd, data, l, offset);
         if (rc == -1) {
             fprintf(stderr, "IO error: %s\n", strerror(errno));
             exit(-1);
         }
 
-        /* Keep track of any data still to do */
-        len -= rc;
+    /* Keep track of any data still to do */
+    len -= (off_t)rc;
         if (len) {              /* More to write */
-            data += rc;
-            offset += rc;
+            data += (size_t)rc;
+            offset += (off_t)rc;
         }
     }
 
@@ -150,8 +155,12 @@ static void write_blocks(struct rcksum_state *z, const unsigned char *data,
  * buf[] (which must be at least len bytes long) */
 int rcksum_read_known_data(struct rcksum_state *z, unsigned char *buf,
                            off_t offset, size_t len) {
-    int rc = pread(z->fd, buf, len, offset);
-    return rc;
+    ssize_t rc = pread(z->fd, buf, len, offset);
+    if (rc < 0)
+        return (int)rc;
+    /* rc is non-negative and may be larger than INT_MAX; clamp to INT_MAX */
+    if (rc > INT_MAX) return INT_MAX;
+    return (int)rc;
 }
 
 /* rcksum_submit_blocks(self, data, startblock, endblock)
@@ -328,21 +337,21 @@ int rcksum_submit_source_data(struct rcksum_state *const z, unsigned char *data,
     /* The window in data[] currently being considered is 
      * [x, x+bs)
      */
-    int x = 0;
-    register int bs = z->blocksize;
+    size_t x = 0;
+    register size_t bs = (size_t)z->blocksize;
     int got_blocks = 0;
 
     if (offset) {
-        x = z->skip;
+        x = (size_t)z->skip;
     }
     else {
         z->next_match = NULL;
     }
 
     if (x || !offset) {
-        z->r[0] = rcksum_calc_rsum_block(data + x, bs);
+        z->r[0] = rcksum_calc_rsum_block(data + x, (size_t)bs);
         if (z->seq_matches > 1)
-            z->r[1] = rcksum_calc_rsum_block(data + x + bs, bs);
+            z->r[1] = rcksum_calc_rsum_block(data + x + (int)bs, (size_t)bs);
     }
     z->skip = 0;
 
@@ -410,7 +419,7 @@ int rcksum_submit_source_data(struct rcksum_state *const z, unsigned char *data,
                     /* can't calculate rsum for block after this one, because
                      * it's not in the buffer. So leave a hint for next time so
                      * we know we need to recalculate */
-                    z->skip = x + z->context - len;
+                    z->skip = (int)(x + z->context - len);
                     return got_blocks;
                 }
 
@@ -420,9 +429,9 @@ int rcksum_submit_source_data(struct rcksum_state *const z, unsigned char *data,
                 if (z->seq_matches > 1 && blocks_matched == 1)
                     z->r[0] = z->r[1];
                 else
-                    z->r[0] = rcksum_calc_rsum_block(data + x, bs);
+                    z->r[0] = rcksum_calc_rsum_block(data + x, (size_t)bs);
                 if (z->seq_matches > 1)
-                    z->r[1] = rcksum_calc_rsum_block(data + x + bs, bs);
+                    z->r[1] = rcksum_calc_rsum_block(data + x + (int)bs, (size_t)bs);
                 continue;
             }
         }
@@ -450,10 +459,10 @@ int rcksum_submit_source_file(struct rcksum_state *z, FILE * f, int progress) {
     /* Track progress */
     int got_blocks = 0;
     off_t in = 0;
-    int in_mb = 0;
+    size_t in_mb = 0;
 
     /* Allocate buffer of 16 blocks */
-    register int bufsize = z->blocksize * 16;
+    register size_t bufsize = (size_t)z->blocksize * 16;
     unsigned char *buf = malloc(bufsize + z->context);
     if (!buf)
         return 0;
@@ -472,14 +481,14 @@ int rcksum_submit_source_file(struct rcksum_state *z, FILE * f, int progress) {
         /* If this is the start, fill the buffer for the first time */
         if (!in) {
             len = fread(buf, 1, bufsize, f);
-            in += len;
+            in += (off_t)len;
         }
 
         /* Else, move the last context bytes from the end of the buffer to the
          * start, and refill the rest of the buffer from the stream. */
         else {
             memcpy(buf, buf + (bufsize - z->context), z->context);
-            in += bufsize - z->context;
+            in += (off_t)(bufsize - z->context);
             len = z->context + fread(buf + z->context, 1, bufsize - z->context, f);
         }
 

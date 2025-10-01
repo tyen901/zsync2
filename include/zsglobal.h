@@ -127,6 +127,55 @@ static inline char* realpath(const char* path, char* resolved_path) {
 	return _fullpath(resolved_path, path, _MAX_PATH);
 }
 # endif
-#endif
 
-#endif
+/* On MSVC, many POSIX names are provided with an underscore prefix and the
+ * non-underscored names are deprecated. Provide safe macro mappings so the
+ * rest of the codebase can continue to use the POSIX names without pulling
+ * deprecation warnings when building with MSVC. These are no-ops on other
+ * platforms. */
+#if defined(_MSC_VER)
+# ifndef strdup
+#  define strdup _strdup
+# endif
+# ifndef open
+#  define open _open
+# endif
+# ifndef close
+#  define close _close
+# endif
+# ifndef unlink
+#  define unlink _unlink
+# endif
+# ifndef popen
+#  define popen _popen
+# endif
+# ifndef pclose
+#  define pclose _pclose
+# endif
+# ifndef getcwd
+#  define getcwd _getcwd
+# endif
+# ifndef mkdir
+#  define mkdir _mkdir
+# endif
+# ifndef strcasecmp
+#  define strcasecmp _stricmp
+# endif
+# ifndef strncasecmp
+#  define strncasecmp _strnicmp
+# endif
+# ifndef ftruncate
+#  define ftruncate _chsize
+# endif
+
+/* Provide a prototype for strptime when building on Windows; an implementation
+ * is provided in src/windows_compat.c and this declaration avoids implicit
+ * declaration warnings on MSVC. */
+# ifndef HAVE_STRPTIME
+char *strptime(const char *s, const char *format, struct tm *tm);
+# endif
+#endif /* _MSC_VER */
+
+#endif /* _WIN32 || _MSC_VER */
+
+#endif /* ZSGLOBAL_H */

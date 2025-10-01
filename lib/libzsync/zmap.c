@@ -316,7 +316,7 @@ int zmap_search(const struct zmap* zm, long zoffset) {
         }
     }
     if (low > high) {
-        fprintf(stderr, "bad offset %ld, not in z-map\n", zoffset);
+            fprintf(stderr, "bad offset " OFF_T_PF ", not in z-map\n", (unsigned long long)zoffset);
         exit(3);
     }
     return low;
@@ -357,7 +357,7 @@ void configure_zstream_for_zdata(const struct zmap *zm, z_stream * zs,
      * block. Sanity check - this zstream should have read data (the block
      * header) already). */
     else if (zs->total_in == 0) {
-        fprintf(stderr, "bad first offset %ld, not a block start.\n", zoffset);
+    fprintf(stderr, "bad first offset " OFF_T_PF ", not a block start.\n", (unsigned long long)zoffset);
         exit(3);
     }
 

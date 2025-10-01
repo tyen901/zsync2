@@ -87,7 +87,10 @@ struct rcksum_state {
 /* From a hash entry, return the corresponding blockid */
 static inline zs_blockid get_HE_blockid(const struct rcksum_state *z,
                                         const struct hash_entry *e) {
-    return e - z->blockhashes;
+    /* Pointer difference may be a larger integer on some platforms; cast
+     * explicitly to zs_blockid to avoid narrow-conversion warnings. The
+     * API uses zs_blockid (int), so this mirrors the intended behaviour. */
+    return (zs_blockid)(e - z->blockhashes);
 }
 
 void add_to_ranges(struct rcksum_state *z, zs_blockid n);

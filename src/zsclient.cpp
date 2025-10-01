@@ -83,8 +83,10 @@ namespace zsync2 {
 
             // initialize cwd
             {
-                size_t cwdBufSize = 4096;
-                auto* cwdBuf = (char*) calloc(4096, sizeof(char));
+                // on MSVC, getcwd takes an int for the buffer size; use an int here to avoid
+                // implicit narrowing from size_t to int (warning C4267)
+                int cwdBufSize = 4096;
+                auto* cwdBuf = static_cast<char*>(calloc((size_t)cwdBufSize, sizeof(char)));
                 cwd = getcwd(cwdBuf, cwdBufSize);
                 free(cwdBuf);
             }
