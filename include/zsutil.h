@@ -37,6 +37,7 @@ namespace zsync2 {
     bool resolveRedirections(const std::string& absoluteUrl, std::string& redirectedUrl);
 
     int32_t getPerms(const std::string& path, mode_t& permissions);
+    int32_t setPerms(const std::string& path, mode_t permissions);
 
     std::vector<std::string> split(const std::string& s, char delim = ' ');
 

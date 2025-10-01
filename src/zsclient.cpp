@@ -687,7 +687,7 @@ namespace zsync2 {
             std::vector<unsigned char> buffer;
             try {
                 buffer.reserve(BUFFERSIZE);
-            } catch (std::bad_alloc& e) {
+            } catch (const std::bad_alloc&) {
                 // finish available data, then re-throw
                 zsync_end_receive(zr);
                 range_fetch_end(rf);
@@ -962,7 +962,12 @@ namespace zsync2 {
                         oss << "Failed to copy permissions to new file: " << strerror(errCode);
                         issueStatusMessage(oss.str());
                     } else {
-                        chmod(tempFilePath.c_str(), newPerms);
+                        int setErr = zsync2::setPerms(tempFilePath, newPerms);
+                        if (setErr != 0) {
+                            std::ostringstream oss;
+                            oss << "Failed to set permissions on new file: " << strerror(setErr);
+                            issueStatusMessage(oss.str());
+                        }
                     }
 
                     if (link(pathToLocalFile.c_str(), oldFileBackup.c_str()) != 0) {

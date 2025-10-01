@@ -1,4 +1,3 @@
-
 /*
  *   zsync - client side rsync over http
  *   Copyright (C) 2004,2005,2007,2009 Colin Phipps <cph@moria.org.uk>
@@ -207,16 +206,19 @@ void http_load_ranges(struct range_fetch* rf)
     for (; (sent_this_chunk < ranges_limit) && (rf->rangessent < rf->nranges); sent_this_chunk++) {
         /* makes the table of ranges access more readable */
         i = rf->rangessent;
-        l = strlen(ranges_opt);
+        l = (int)strlen(ranges_opt);
     /* Ensure we pass an integer type matching OFF_T_PF; cast to unsigned long long */
     snprintf(range, sizeof(range), OFF_T_PF "-" OFF_T_PF ",",
          (unsigned long long)rf->ranges_todo[2 * i], (unsigned long long)rf->ranges_todo[2 * i + 1]);
-        strncat(ranges_opt, range, l + strlen(range));
+        strncat(ranges_opt, range, (size_t)(l + strlen(range)));
         rf->rangessent++;
     }
 
     /* gets rid of the trailing comma */
-    ranges_opt[strlen(ranges_opt)-1] = 0;
+    {
+        size_t __idx = strlen(ranges_opt);
+        if (__idx > 0) ranges_opt[__idx - 1] = 0;
+    }
     curl_easy_setopt(rf->file->handle.curl, CURLOPT_RANGE, ranges_opt);
 }
 
@@ -366,7 +368,7 @@ static int use_buffer(HTTP_FILE *file, uint64_t want)
         file->buffer_len = 0;
     }else{
         /* move the contents past want down so it's still available */
-        memmove(file->buffer, &file->buffer[want], (file->buffer_pos - want));
+        memmove(file->buffer, &file->buffer[want], (size_t)(file->buffer_pos - want));
         file->buffer_pos -= want;
     }
     return 0;
@@ -597,8 +599,8 @@ int range_fetch_read_http_headers(struct range_fetch *rf) {
             uint64_t from, to;
             sscanf(p, "bytes " OFF_T_PF "-" OFF_T_PF "/", &from, &to);
             if (from <= to) {
-                rf->block_left = to + 1 - from;
-                rf->offset = from;
+                rf->block_left = (size_t)(to + 1 - from);
+                rf->offset = (off_t)from;
             } else {
                 log_message("failed to parse content-range header");
             }
@@ -743,8 +745,8 @@ int get_range_block(struct range_fetch *rf, off_t * offset, unsigned char *data,
                     if (2 == sscanf(buf, "content-range: bytes " OFF_T_PF "-" OFF_T_PF "/", &ufrom, &uto)) {
                         from = (off_t)ufrom;
                         to = (off_t)uto;
-                        rf->offset = from;
-                        rf->block_left = to - from + 1;
+                        rf->offset = (off_t)from;
+                        rf->block_left = (size_t)(to - from + 1);
                         gotr = 1;
                     }
                 }
@@ -778,10 +780,10 @@ int get_range_block(struct range_fetch *rf, off_t * offset, unsigned char *data,
     /* update internal stats of how many blocks are left,
        file offset, and bytes downloaded. */
     rf->block_left -= bytes_to_caller;
-    rf->offset += bytes_to_caller;
-    rf->bytes_down += bytes_to_caller;
+    rf->offset += (off_t)bytes_to_caller;
+    rf->bytes_down += (off_t)bytes_to_caller;
 
-    return bytes_to_caller;
+    return (int)bytes_to_caller;
 }
 
 /* range_fetch_bytes_down

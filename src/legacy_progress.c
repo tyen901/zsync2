@@ -41,18 +41,18 @@ void do_progress(struct progress *p, float pcnt, long long newdl) {
     /* If new or if time has passed, update progress display & data */
     time_t newtime = time(NULL);
     if (p->lasttime != newtime) {
-        int passed = p->lasttime ? newtime - p->lasttime : 0;
+        int passed = p->lasttime ? (int)(newtime - p->lasttime) : 0;
         if (!p->lasttime)
             p->starttime = newtime;
         p->lasttime = newtime;
 
         /* Update progress bar displayed */
-        progbar(pcnt * (20.0 / 100.0), pcnt);
+        progbar((int)(pcnt * (20.0f / 100.0f)), pcnt);
 
         /* Each time 1s has passed, we update and redisplay our download rate */
         if (passed) {
-            float rate = newdl - p->lastdl;
-            int sleft = (100.0f - pcnt) / (pcnt - p->lastpcnt);
+            float rate = (float)(newdl - p->lastdl);
+            int sleft = (int)((100.0f - pcnt) / (pcnt - p->lastpcnt));
             if (passed != 1) {
                 rate /= passed;
                 sleft *= passed;
@@ -77,10 +77,10 @@ void end_progress(struct progress *p, int done) {
     if (done == 2)
         progbar(20, 100.0);
     else
-        progbar(p->lastpcnt * (20.0 / 100.0), p->lastpcnt);
+        progbar((int)(p->lastpcnt * (20.0f / 100.0f)), p->lastpcnt);
 
     {
-        float rate = ((float)p->lastdl) / (p->lasttime - p->starttime + 0.5);
+        float rate = ((float)p->lastdl) / (float)(p->lasttime - p->starttime + 0.5);
         printf(" %.1f kBps ", rate / 1000.0);
     }
     puts(done == 2 ? "DONE    \n" : !done ? "aborted    \n" : "        \n");

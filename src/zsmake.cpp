@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstring>
 #include <fstream>
+#include <cstdint>
 #include <iomanip>
 #include <iostream>
 #include <iterator>
@@ -42,9 +43,9 @@ namespace zsync2 {
         std::string url;
 
         std::string fileSHA1Hash;
-        uint32_t blockSize;
+    uint32_t blockSize;
 
-        long length;
+    uint64_t length;
         int checksumLength;
         int rSumLength;
         int seqMatches;
@@ -143,7 +144,7 @@ namespace zsync2 {
                     SHA1Update(&sha1Ctx, reinterpret_cast<const uint8_t*>(buffer.data()), bytesRead);
 
                     writeBlockSums(buffer, bytesRead);
-                    length += bytesRead;
+                    length += static_cast<uint64_t>(bytesRead);
                 } else {
                     auto error = errno;
 
@@ -174,8 +175,11 @@ namespace zsync2 {
                 return false;
             }
 
-            if (blockSize == 0)
-                blockSize = (ifs.tellg() < 100000000) ? 2048 : 4096;
+            if (blockSize == 0) {
+                std::streampos pos = ifs.tellg();
+                if (pos == std::streampos(-1)) pos = 0;
+                blockSize = (pos < static_cast<std::streampos>(100000000)) ? 2048 : 4096;
+            }
 
             if (!readStreamWriteBlockSums(ifs, sha1Ctx))
                 return false;
@@ -226,7 +230,7 @@ namespace zsync2 {
                 return false;
 
             headerFields["Blocksize"] = std::to_string(blockSize);
-            headerFields["Length"] = std::to_string(length);
+            headerFields["Length"] = std::to_string(static_cast<unsigned long long>(length));
 
 
             if (url.empty()) {

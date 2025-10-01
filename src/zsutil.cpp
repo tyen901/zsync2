@@ -181,3 +181,18 @@ namespace zsync2 {
         return ss.str();
     }
 }
+
+namespace zsync2 {
+    int32_t setPerms(const std::string& path, mode_t permissions) {
+#if defined(_WIN32) || defined(_MSC_VER)
+        if (_chmod(path.c_str(), permissions) != 0) {
+            return errno;
+        }
+#else
+        if (chmod(path.c_str(), permissions) != 0) {
+            return errno;
+        }
+#endif
+        return 0;
+    }
+}

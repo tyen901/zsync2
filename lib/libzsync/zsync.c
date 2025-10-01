@@ -65,6 +65,16 @@
 #include "sha1.h"
 #include "zmap.h"
 
+#ifdef _MSC_VER
+/* Third-party upstream C code uses patterns that trigger many MSVC warnings
+ * (size_t->int conversions, deprecated POSIX names like read/lseek, and
+ * some const-qualifier differences). We disable those warnings locally
+ * so they don't fail or clutter CI builds on Windows. Keep the scope
+ * limited to this translation unit. */
+#pragma warning(push)
+#pragma warning(disable:4267 4244 4996 4090 4133)
+#endif
+
 /* Probably we really want a table of compression methods here. But I've only
  * implemented SHA1 so this is it for now. */
 const char ckmeth_sha1[] = { "SHA-1" };
@@ -227,7 +237,8 @@ struct zsync_state* zsync_begin(FILE * f, int headersOnly, const char* target_di
             else if (!strcmp(buf, "Blocksize")) {
                 zs->blocksize = atol(p);
                 if (zs->blocksize < 0 || (zs->blocksize & (zs->blocksize - 1))) {
-                    fprintf(stderr, "nonsensical blocksize %ld\n", zs->blocksize);
+                    /* zs->blocksize is size_t; use %zu for portability */
+                    fprintf(stderr, "nonsensical blocksize %zu\n", zs->blocksize);
                     free(zs);
                     return NULL;
                 }
@@ -1039,3 +1050,7 @@ void zsync_end_receive(struct zsync_receiver *zr) {
     free(zr->outbuf);
     free(zr);
 }
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
