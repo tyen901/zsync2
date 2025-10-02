@@ -11,6 +11,9 @@
 #include <fstream>
 #include <iomanip>
 #include <sys/stat.h>
+#include <sstream>
+#include <string>
+#include <cctype>
 
 // library headers
 #include <cpr/cpr.h>

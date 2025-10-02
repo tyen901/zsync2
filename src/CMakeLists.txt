@@ -38,7 +38,7 @@ function(add_libzsync2 NAME BUILD_TYPE)
 
     # On Windows, our compatibility implementation uses BCrypt APIs; link bcrypt.lib
     if(WIN32)
-        target_link_libraries("${NAME}" PRIVATE bcrypt)
+        target_link_libraries("${NAME}" PRIVATE bcrypt Ws2_32)
     endif()
 
     # Additional platform-specific link deps (if any) can be added here.

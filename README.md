@@ -109,6 +109,51 @@ Notes and common pitfalls:
 - CPR and args: you can provide system-installed `cpr` and `args` via vcpkg. If CMake cannot find a system `cpr` package, the project will fetch and build its bundled copy automatically.
 - If CMake caches a failed find_package() result, delete `build/CMakeCache.txt` (or the whole `build/` folder) and re-run the configure command after changing vcpkg installs or CMake options.
 
+Troubleshooting & tips for Windows builds
+----------------------------------------
+
+- Prefer using the vcpkg toolchain (example above). It makes finding `gtest`, `cpr` and `curl` straightforward via `-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake`.
+- Bundled zlib vs vcpkg zlib: the project ships a bundled `zlib`. Installing `zlib` into vcpkg while also building the bundled copy can cause duplicate-symbol linker errors (inflate, zlibVersion, etc.). If you hit multiple-definition or LNK2005 errors, either:
+	- avoid installing `zlib` in vcpkg, or
+	- remove `zlib` from vcpkg (note: vcpkg may ask to remove dependent packages too), or
+	- delete your `build/` directory and reconfigure with a consistent toolchain/generator so only one zlib is linked.
+
+- Changing CMake generator (for example switching between Ninja and Visual Studio) requires a clean build directory. If you mix generators in the same build folder CMake will error with "Does not match the generator used previously". Remove `build/` or at least `build/CMakeCache.txt` before switching generator.
+
+- If you see unresolved Windows network symbols (htons/ntohs/select) when linking, ensure you configure and build with the recommended settings; the project links the correct system libraries on Windows (e.g., `Ws2_32`, `bcrypt`) via CMake. A clean configure/build with the vcpkg toolchain normally resolves these.
+
+Running the unit tests
+----------------------
+
+1. Install `gtest` with vcpkg (example):
+
+```powershell
+C:/vcpkg/vcpkg.exe install gtest:x64-windows
+```
+
+2. Configure and build using the vcpkg toolchain (example):
+
+```powershell
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+cmake --build build --config Debug --parallel 4
+```
+
+3. Run tests from the build directory:
+
+```powershell
+Push-Location build
+ctest -C Debug --output-on-failure
+Pop-Location
+```
+
+Notes about test differences on Windows
+--------------------------------------
+
+- On Windows you may observe a failing `Strptime` test due to platform differences in `strptime`/date-time handling and timezone interpretation. This is a known cross-platform inconsistency (not a build-system problem). If you hit this, options are:
+	- run the rest of the tests and ignore/adjust that single test locally, or
+	- update the code to use a consistent, platform-independent parsing routine, or
+	- modify the test to accept platform-dependent results.
+
 ## Functional description
 
 zsync is a well known tool for downloading and updating local files from HTTP
